@@ -317,4 +317,724 @@
         .ai-settings-panel {
             display: none;
             background: #0f172a;
-            border: 1px solid var(--card-border
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+
+        .ai-settings-panel input {
+            width: 100%;
+            padding: 7px 9px;
+            margin-top: 6px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--card-border);
+            background: #1e293b;
+            color: white;
+            outline: none;
+        }
+
+        .ai-chat-box {
+            background: #0f172a;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            height: 210px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-msg {
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 88%;
+            line-height: 1.5;
+        }
+
+        .ai-msg.user {
+            background: var(--accent-primary);
+            align-self: flex-start;
+        }
+
+        .ai-msg.bot {
+            background: #334155;
+            align-self: flex-end;
+        }
+
+        .speak-inline-btn {
+            background: transparent;
+            border: none;
+            color: #38bdf8;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-right: 6px;
+        }
+
+        .ai-input-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ai-input-group input {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--card-border);
+            background: #0f172a;
+            color: white;
+            outline: none;
+        }
+
+        .mic-btn {
+            background: #334155;
+            color: white;
+            border: 1px solid var(--card-border);
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .mic-btn.listening {
+            background: var(--rose-red);
+            border-color: var(--rose-red);
+        }
+
+        .focus-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #090d16;
+            z-index: 999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- واجهة التطبيق الرئيسية -->
+    <div id="appContent">
+        <header>
+            <div>
+                <h2>🎓 ذاكِر بصحبة (Study Squad)</h2>
+                <small style="color: var(--text-sub)">نظام دعم وتنظيم مذاكرة الثانوية العامة</small>
+            </div>
+            <div class="header-actions">
+                <button class="btn" style="background:#0284c7;" onclick="triggerReturnBonus()">🔵 أنا رجعت</button>
+                <button class="btn" style="background:var(--purple);" onclick="toggleCalc()">🧮 حاسبة</button>
+                <button class="btn" style="background:var(--emerald-green);" onclick="toggleAiModal()">🤖 مساعدة AI صوتية</button>
+            </div>
+        </header>
+
+        <div class="stats-bar">
+            <div class="stat-item">🪙 Coins: <b id="coinsCount" style="color:var(--amber-gold)">0</b></div>
+            <div class="stat-item">🏆 المستوى: <b id="badgeRank" style="color:var(--cyan-blue)">🥉 بداية قوية</b></div>
+        </div>
+
+        <!-- لوحة التحكم (Dashboard) -->
+        <div class="dashboard-grid">
+            <div class="dash-card">
+                <h3>إجمالي المهام</h3>
+                <div class="dash-value" id="dashTotalTasks">2</div>
+            </div>
+            <div class="dash-card">
+                <h3>المهام المنجزة</h3>
+                <div class="dash-value" id="dashCompletedTasks" style="color: var(--emerald-green);">0</div>
+            </div>
+            <div class="dash-card">
+                <h3>نسبة الإنجاز</h3>
+                <div class="dash-value" id="dashProgress">0%</div>
+            </div>
+            <div class="dash-card">
+                <h3>جلسات التركيز المكتملة</h3>
+                <div class="dash-value" id="dashFocusSessions" style="color: var(--amber-gold);">0</div>
+            </div>
+        </div>
+
+        <div class="app-grid">
+            <div>
+                <!-- قسم المتواجدون الآن (Online) -->
+                <div class="card" style="margin-bottom:20px;">
+                    <div class="online-header-row">
+                        <div class="card-title" style="margin-bottom:0;">👥 مين بيذاكر معايا الآن؟</div>
+                        <span class="online-status-badge" id="onlineConnectionStatus">وضع محلي (أضيفي بيانات Firebase للتزامن المباشر)</span>
+                    </div>
+                    <ul class="online-list" id="onlineList"></ul>
+                </div>
+
+                <div class="card" style="margin-bottom:20px;">
+                    <div class="card-title">🎯 خطة المهام التتابعية</div>
+                    <div class="task-input-group">
+                        <input type="text" id="taskSubject" placeholder="المادة (كيمياء...)" style="width:30%;">
+                        <input type="text" id="taskTitle" placeholder="المهمة..." style="width:50%;">
+                        <button class="btn" onclick="addTask()">إضافة +</button>
+                    </div>
+                    <div class="task-list" id="taskList"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">⏱️ مؤقت التركيز (Focus Lock)</div>
+                    <div class="timer-display" id="timerDisplay">25:00</div>
+                    <div class="timer-controls">
+                        <button class="btn" style="background:var(--emerald-green)" onclick="startTimer()">بدء 🚀</button>
+                        <button class="btn" style="background:var(--rose-red)" onclick="pauseTimer()">إيقاف ⏸️</button>
+                        <button class="btn" style="background:var(--amber-gold)" onclick="resetTimer()">إعادة 🔄</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الآلة الحاسبة -->
+    <div class="modal" id="calcModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <b>آلة حاسبة</b>
+                <span style="cursor:pointer;" onclick="toggleCalc()">✕</span>
+            </div>
+            <input type="text" class="calc-screen" id="calcScreen" readonly value="0">
+            <div class="calc-grid">
+                <button class="calc-btn" onclick="calcInput('7')">7</button>
+                <button class="calc-btn" onclick="calcInput('8')">8</button>
+                <button class="calc-btn" onclick="calcInput('9')">9</button>
+                <button class="calc-btn" style="background:var(--rose-red)" onclick="calcClear()">C</button>
+                <button class="calc-btn" onclick="calcInput('4')">4</button>
+                <button class="calc-btn" onclick="calcInput('5')">5</button>
+                <button class="calc-btn" onclick="calcInput('6')">6</button>
+                <button class="calc-btn" onclick="calcInput('*')">×</button>
+                <button class="calc-btn" onclick="calcInput('1')">1</button>
+                <button class="calc-btn" onclick="calcInput('2')">2</button>
+                <button class="calc-btn" onclick="calcInput('3')">3</button>
+                <button class="calc-btn" onclick="calcInput('-')">-</button>
+                <button class="calc-btn" onclick="calcInput('0')">0</button>
+                <button class="calc-btn" onclick="calcInput('.')">.</button>
+                <button class="calc-btn" style="background:var(--emerald-green)" onclick="calcEqual()">=</button>
+                <button class="calc-btn" onclick="calcInput('+')">+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة المساعد الذكي الصوتي (AI Assistant Modal) -->
+    <div class="modal" id="aiModal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="ai-header">
+                <b>🤖 مساعد المذاكرة الصوتي</b>
+                <div class="ai-controls-top">
+                    <button type="button" class="voice-toggle-btn" onclick="toggleAiSettings()">⚙️ مفتاح AI</button>
+                    <button type="button" id="voiceOutputToggle" class="voice-toggle-btn" onclick="toggleVoiceOutput()">🔊 الصوت مفعل</button>
+                    <span style="cursor:pointer;" onclick="closeAiModal()">✕</span>
+                </div>
+            </div>
+
+            <div class="ai-settings-panel" id="aiSettingsPanel">
+                <div>مفتاح Gemini API (يُحفظ في متصفحك فقط):</div>
+                <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy...">
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.85rem;" onclick="saveGeminiApiKey()">حفظ المفتاح</button>
+            </div>
+
+            <div class="ai-chat-box" id="aiChatBox">
+                <div class="ai-msg bot">
+                    <span>أهلاً بكِ! اسأليني كتابةً أو صوتاً عن أي نقطة صعبة في دراستك، وسأجيبكِ وأقرأ الرد بصوت واضح! 💡</span>
+                    <button type="button" class="speak-inline-btn" onclick="speakText('أهلاً بكِ! اسأليني كتابةً أو صوتاً عن أي نقطة صعبة في دراستك، وسأجيبكِ وأقرأ الرد بصوت واضح!')">🔉</button>
+                </div>
+            </div>
+            <div class="ai-input-group">
+                <button type="button" id="micBtn" class="mic-btn" title="تحدثي بسؤالك" onclick="toggleVoiceInput()">🎤</button>
+                <input type="text" id="aiQuestionInput" placeholder="اكتبي سؤالك أو اضغطي المايك..." onkeypress="handleAiKeyPress(event)">
+                <button type="button" class="btn" style="padding: 8px 12px;" onclick="askAiAssistant()">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- وضع التركيز -->
+    <div class="focus-overlay" id="focusLock">
+        <h1 style="color: var(--cyan-blue); margin-bottom: 10px;">🔒 وضع التركيز نشط</h1>
+        <p style="color: var(--text-sub); margin-bottom: 20px;">ركز في هدفك الآن، تم تقليص المشتتات!</p>
+        <div class="timer-display" id="lockTimer" style="font-size: 5rem;">25:00</div>
+        <button class="btn" style="margin-top:20px; background:var(--rose-red);" onclick="exitFocusLock()">خروج طارئ 🚪</button>
+    </div>
+
+    <script>
+        // ضعي مفتاح Gemini هنا للتجربة أو احفظيه من زر "⚙️ مفتاح AI" داخل التطبيق
+        var DEFAULT_GEMINI_API_KEY = "";
+
+        var coins = 0;
+        var completedSessionsCount = 0;
+        var tasks = [
+            { id: 1, subject: 'كيمياء', title: 'محاضرة 3 - الباب الأول', completed: false },
+            { id: 2, subject: 'فيزياء', title: 'حل 20 سؤال', completed: false }
+        ];
+        var timerInterval = null;
+        var timeLeft = 25 * 60;
+
+        // إعدادات الصوت للمساعد الذكي
+        var voiceOutputEnabled = true;
+        var recognition = null;
+        var isListening = false;
+        var isAskingAi = false;
+
+        // حالة المتواجدين الآن (تُحدّث تلقائياً عند ربط Firebase)
+        var onlineSquadList = [
+            { name: "أنتِ", status: "جاهزة للبدء 📚", isSelf: true }
+        ];
+
+        function initApp() {
+            renderTasks();
+            updateDashboard();
+            renderOnlineSquad();
+            setupSpeechRecognition();
+            loadSavedApiKey();
+        }
+
+        function loadSavedApiKey() {
+            var savedKey = localStorage.getItem("study_squad_gemini_key") || DEFAULT_GEMINI_API_KEY;
+            var input = document.getElementById("geminiApiKeyInput");
+            if (input && savedKey) {
+                input.value = savedKey;
+            }
+        }
+
+        function getGeminiApiKey() {
+            var savedKey = localStorage.getItem("study_squad_gemini_key");
+            return (savedKey && savedKey.trim()) ? savedKey.trim() : DEFAULT_GEMINI_API_KEY.trim();
+        }
+
+        function toggleAiSettings() {
+            var panel = document.getElementById("aiSettingsPanel");
+            panel.style.display = panel.style.display === "block" ? "none" : "block";
+        }
+
+        function saveGeminiApiKey() {
+            var input = document.getElementById("geminiApiKeyInput");
+            var key = input.value.trim();
+            if (!key) {
+                localStorage.removeItem("study_squad_gemini_key");
+                alert("تم مسح المفتاح المحفوظ.");
+                return;
+            }
+            localStorage.setItem("study_squad_gemini_key", key);
+            document.getElementById("aiSettingsPanel").style.display = "none";
+            alert("تم حفظ مفتاح Gemini بنجاح! ✅");
+        }
+
+        function renderOnlineSquad() {
+            var listEl = document.getElementById("onlineList");
+            if (!listEl) return;
+            listEl.innerHTML = "";
+
+            if (!onlineSquadList || onlineSquadList.length === 0) {
+                listEl.innerHTML = '<li class="online-item"><span>لا يوجد أحد متصل الآن</span></li>';
+                return;
+            }
+
+            onlineSquadList.forEach(function(member) {
+                var li = document.createElement("li");
+                li.className = "online-item";
+                li.innerHTML = '<div><span class="online-dot"></span><b>' + escapeHtml(member.name) + '</b></div>' +
+                    '<span style="color:var(--cyan-blue); font-size:0.85rem;">' + escapeHtml(member.status || "يذاكر الآن") + '</span>';
+                listEl.appendChild(li);
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function triggerReturnBonus() {
+            coins += 2;
+            document.getElementById('coinsCount').innerText = coins;
+            if (typeof window.syncOnlinePresence === "function") {
+                window.syncOnlinePresence("رجع للمذاكرة بقوة 🔥");
+            } else {
+                onlineSquadList[0].status = "رجع للمذاكرة بقوة 🔥";
+                renderOnlineSquad();
+            }
+            alert("محدش بيحاسبك على الأيام اللي فاتت. المهم إنك رجعت للترابيزة. يلا نبدأ من هنا! 🚀 (+2 Coins)");
+        }
+
+        function updateDashboard() {
+            var total = tasks.length;
+            var completed = tasks.filter(function(t) { return t.completed; }).length;
+            var percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('dashTotalTasks').innerText = total;
+            document.getElementById('dashCompletedTasks').innerText = completed;
+            document.getElementById('dashProgress').innerText = percentage + '%';
+            document.getElementById('dashFocusSessions').innerText = completedSessionsCount;
+        }
+
+        function renderTasks() {
+            var list = document.getElementById('taskList');
+            list.innerHTML = '';
+            tasks.forEach(function(task, index) {
+                var isLocked = index > 0 && !tasks[index - 1].completed;
+                var div = document.createElement('div');
+                div.className = 'task-item ' + (task.completed ? 'completed ' : '') + (isLocked ? 'locked' : '');
+                div.innerHTML = '<div><b style="color:var(--cyan-blue)">[' + escapeHtml(task.subject) + ']</b> ' + escapeHtml(task.title) + '</div>' +
+                    '<div>' + (isLocked ? '🔒' : task.completed ? '✅' : '<button class="btn" style="padding:4px 8px; font-size:0.8rem;" onclick="completeTask(' + task.id + ')">إنجاز</button>') + '</div>';
+                list.appendChild(div);
+            });
+            updateDashboard();
+        }
+
+        function addTask() {
+            var sub = document.getElementById('taskSubject').value.trim();
+            var title = document.getElementById('taskTitle').value.trim();
+            if(!sub || !title) return alert('يرجى ملء البيانات');
+            tasks.push({ id: Date.now(), subject: sub, title: title, completed: false });
+            document.getElementById('taskSubject').value = '';
+            document.getElementById('taskTitle').value = '';
+            renderTasks();
+        }
+
+        function completeTask(id) {
+            tasks.forEach(function(t){ if(t.id === id) t.completed = true; });
+            coins += 2;
+            document.getElementById('coinsCount').innerText = coins;
+            renderTasks();
+        }
+
+        function updateTimerDisplay() {
+            var m = Math.floor(timeLeft / 60);
+            var s = timeLeft % 60;
+            var str = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+            document.getElementById('timerDisplay').innerText = str;
+            document.getElementById('lockTimer').innerText = str;
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+            if (typeof window.syncOnlinePresence === "function") {
+                window.syncOnlinePresence("في جلسة تركيز 🔒");
+            }
+            document.getElementById('focusLock').style.display = 'flex';
+            timerInterval = setInterval(function() {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    completedSessionsCount++;
+                    document.getElementById('focusLock').style.display = 'none';
+                    updateDashboard();
+                    alert("انتهت الجلسة بنجاح! ☕ (+1 جلسة تركيز)");
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeLeft = 25 * 60;
+            updateTimerDisplay();
+        }
+
+        function exitFocusLock() {
+            pauseTimer();
+            document.getElementById('focusLock').style.display = 'none';
+        }
+
+        function toggleCalc() {
+            var modal = document.getElementById('calcModal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleAiModal() {
+            var modal = document.getElementById('aiModal');
+            var opening = modal.style.display !== 'flex';
+            modal.style.display = opening ? 'flex' : 'none';
+            if (!opening) stopSpeech();
+        }
+
+        function closeAiModal() {
+            document.getElementById('aiModal').style.display = 'none';
+            stopSpeech();
+        }
+
+        function toggleVoiceOutput() {
+            voiceOutputEnabled = !voiceOutputEnabled;
+            var btn = document.getElementById('voiceOutputToggle');
+            if (voiceOutputEnabled) {
+                btn.innerText = '🔊 الصوت مفعل';
+                btn.classList.remove('muted');
+            } else {
+                btn.innerText = '🔇 الصوت مكتوم';
+                btn.classList.add('muted');
+                stopSpeech();
+            }
+        }
+
+        function stopSpeech() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function cleanTextForSpeech(text) {
+            return text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+        }
+
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) return;
+            var clean = cleanTextForSpeech(text);
+            if (!clean) return;
+            window.speechSynthesis.cancel();
+            var utterance = new SpeechSynthesisUtterance(clean);
+            utterance.lang = 'ar-EG';
+            utterance.rate = 1.02;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function setupSpeechRecognition() {
+            var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) return;
+            recognition = new SpeechRec();
+            recognition.lang = 'ar-EG';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = function(event) {
+                var transcript = event.results[0][0].transcript;
+                document.getElementById('aiQuestionInput').value = transcript;
+                askAiAssistant();
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                var micBtn = document.getElementById('micBtn');
+                if (micBtn) micBtn.classList.remove('listening');
+            };
+
+            recognition.onerror = function() {
+                isListening = false;
+                var micBtn = document.getElementById('micBtn');
+                if (micBtn) micBtn.classList.remove('listening');
+            };
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert("المتصفح الحالي لا يدعم التسجيل الصوتي المباشر؛ يمكنكِ كتابة سؤالك وسيقرأه المساعد صوتياً.");
+                return;
+            }
+            stopSpeech();
+            var micBtn = document.getElementById('micBtn');
+            if (!isListening) {
+                isListening = true;
+                micBtn.classList.add('listening');
+                recognition.start();
+            } else {
+                recognition.stop();
+            }
+        }
+
+        function handleAiKeyPress(e) {
+            if (e.key === 'Enter') {
+                askAiAssistant();
+            }
+        }
+
+        function appendBotMessage(replyText) {
+            var chatBox = document.getElementById('aiChatBox');
+            var botMsg = document.createElement('div');
+            botMsg.className = 'ai-msg bot';
+
+            var span = document.createElement('span');
+            span.innerText = replyText;
+
+            var speakBtn = document.createElement('button');
+            speakBtn.type = 'button';
+            speakBtn.className = 'speak-inline-btn';
+            speakBtn.title = 'تشغيل الصوت';
+            speakBtn.innerText = '🔉';
+            speakBtn.onclick = function() { speakText(replyText); };
+
+            botMsg.appendChild(span);
+            botMsg.appendChild(speakBtn);
+            chatBox.appendChild(botMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            if (voiceOutputEnabled) {
+                speakText(replyText);
+            }
+        }
+
+        function getFallbackStudyReply(q) {
+            if (q.includes("فيزياء") || q.includes("قانون")) {
+                return "فكرة السؤال تعتمد على تحديد المعطيات واختيار القانون الأساسي (مثل كيرشوف أو فاراداي). أضيفي مفتاح Gemini من زر ⚙️ مفتاح AI لتحصلي على إجابة مفصلة لأي مسألة! ⚡";
+            } else if (q.includes("كيمياء") || q.includes("معادلة")) {
+                return "ابدئي بكتابة المعادلة موزونة ثم احسبي عدد المولات بدقة. لتحليل أي سؤال بالاسم والخطوات، أضيفي مفتاح Gemini من زر ⚙️ مفتاح AI. 🧪";
+            }
+            return "لم يتم ضبط مفتاح Gemini API بعد. اضغطي على (⚙️ مفتاح AI) أعلى النافذة وأدخلي مفتاحك المجاني لكي أجاوبكِ على أي سؤال بدقة! 🧠";
+        }
+
+        async function fetchGeminiAnswer(userQuestion, apiKey) {
+            var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey);
+            var response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: "أنت مساعد مذاكرة ذكي ومشجع لطلاب الثانوية العامة. أجب بالعربية بوضوح واختصار مناسب للقراءة الصوتية:\n" + userQuestion
+                        }]
+                    }]
+                })
+            });
+
+            var data = await response.json();
+            if (!response.ok) {
+                var apiErr = (data && data.error && data.error.message) ? data.error.message : "خطأ من خدمة الذكاء الاصطناعي";
+                throw new Error(apiErr);
+            }
+
+            var candidate = data && data.candidates && data.candidates[0];
+            var parts = candidate && candidate.content && candidate.content.parts;
+            var replyText = parts && parts.map(function(p) { return p.text || ""; }).join("").trim();
+
+            if (!replyText) {
+                throw new Error("لم يرجع المساعد نصاً واضحاً.");
+            }
+            return replyText;
+        }
+
+        async function askAiAssistant() {
+            if (isAskingAi) return;
+            var inputField = document.getElementById('aiQuestionInput');
+            var q = inputField.value.trim();
+            if (!q) return;
+
+            var chatBox = document.getElementById('aiChatBox');
+
+            var userMsg = document.createElement('div');
+            userMsg.className = 'ai-msg user';
+            userMsg.innerText = q;
+            chatBox.appendChild(userMsg);
+
+            inputField.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            var apiKey = getGeminiApiKey();
+            if (!apiKey) {
+                appendBotMessage(getFallbackStudyReply(q));
+                return;
+            }
+
+            isAskingAi = true;
+            var loadingMsg = document.createElement('div');
+            loadingMsg.className = 'ai-msg bot';
+            loadingMsg.innerText = 'جاري التفكير... ⏳';
+            chatBox.appendChild(loadingMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                var reply = await fetchGeminiAnswer(q, apiKey);
+                loadingMsg.remove();
+                appendBotMessage(reply);
+            } catch (err) {
+                loadingMsg.remove();
+                appendBotMessage("تعذّر الاتصال بـ Gemini حالياً (" + err.message + "). تأكدي من صحة المفتاح أو اتصالك بالإنترنت.");
+            } finally {
+                isAskingAi = false;
+            }
+        }
+
+        var calcExpr = '';
+        function calcInput(v) {
+            calcExpr += v;
+            document.getElementById('calcScreen').value = calcExpr;
+        }
+        function calcClear() {
+            calcExpr = '';
+            document.getElementById('calcScreen').value = '0';
+        }
+        function calcEqual() {
+            try {
+                calcExpr = eval(calcExpr).toString();
+                document.getElementById('calcScreen').value = calcExpr;
+            } catch(e) {
+                document.getElementById('calcScreen').value = 'خطأ';
+            }
+        }
+
+        initApp();
+    </script>
+
+    <!-- تفعيل التواجد المباشر (Online Presence) عبر Firebase Realtime Database -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // ضعي بيانات مشروعك من Firebase هنا لتفعيل رؤية زملائك المتصلين لحظياً
+        const firebaseConfig = {
+            apiKey: "",
+            authDomain: "",
+            databaseURL: "",
+            projectId: ""
+        };
+
+        const statusBadge = document.getElementById("onlineConnectionStatus");
+
+        if (firebaseConfig.apiKey && firebaseConfig.databaseURL) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const db = getDatabase(app);
+
+                let savedName = localStorage.getItem("study_squad_student_name");
+                if (!savedName) {
+                    savedName = (prompt("اكتبي اسمك ليظهر لزملائك أثناء المذاكرة:") || "").trim() || "طالب مجتهد";
+                    localStorage.setItem("study_squad_student_name", savedName);
+                }
+
+                const onlineRef = ref(db, "study_squad_online");
+                const myEntryRef = push(onlineRef);
+
+                const updatePresence = (statusText = "يذاكر الآن 📖") => {
+                    set(myEntryRef, {
+                        name: savedName,
+                        status: statusText,
+                        updatedAt: Date.now()
+                    });
+                };
+
+                updatePresence("يذاكر الآن 📖");
+                onDisconnect(myEntryRef).remove();
+                window.syncOnlinePresence = updatePresence;
+
+                if (statusBadge) {
+                    statusBadge.innerText = "متصل مباشرة 🟢";
+                    statusBadge.style.color = "#10b981";
+                }
+
+                onValue(onlineRef, (snapshot) => {
+                    const raw = snapshot.val() || {};
+                    const members = Object.values(raw).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                    if (members.length > 0) {
+                        onlineSquadList = members;
+                        renderOnlineSquad();
+                    }
+                });
+            } catch (e) {
+                if (statusBadge) statusBadge.innerText = "تعذّر ربط Firebase";
+            }
+        }
+    </script>
+</body>
+</html>
