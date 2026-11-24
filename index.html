@@ -9,6 +9,9 @@
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22%D8%B0%D8%A7%D9%83%D9%90%D8%B1%20%D8%A8%D8%B5%D8%AD%D8%A8%D8%A9%22%2C%22short_name%22%3A%22Study%20Squad%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fimg.icons8.com%2Ffluency%2F96%2Fgraduation-cap.png%22%2C%22sizes%22%3A%2296x96%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
 
+    <!-- مكتبة Puter.js لتشغيل الذكاء الاصطناعي مباشرة في المتصفح -->
+    <script src="https://js.puter.com/v2/"></script>
+
     <style>
         :root {
             --bg-color: #0f172a;
@@ -314,28 +317,6 @@
             opacity: 0.75;
         }
 
-        .ai-settings-panel {
-            display: none;
-            background: #0f172a;
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-        }
-
-        .ai-settings-panel input {
-            width: 100%;
-            padding: 7px 9px;
-            margin-top: 6px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            border: 1px solid var(--card-border);
-            background: #1e293b;
-            color: white;
-            outline: none;
-        }
-
         .ai-chat-box {
             background: #0f172a;
             border: 1px solid var(--card-border);
@@ -528,16 +509,9 @@
             <div class="ai-header">
                 <b>🤖 مساعد المذاكرة الصوتي</b>
                 <div class="ai-controls-top">
-                    <button type="button" class="voice-toggle-btn" onclick="toggleAiSettings()">⚙️ مفتاح AI</button>
                     <button type="button" id="voiceOutputToggle" class="voice-toggle-btn" onclick="toggleVoiceOutput()">🔊 الصوت مفعل</button>
                     <span style="cursor:pointer;" onclick="closeAiModal()">✕</span>
                 </div>
-            </div>
-
-            <div class="ai-settings-panel" id="aiSettingsPanel">
-                <div>مفتاح Gemini API (يُحفظ في متصفحك فقط):</div>
-                <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy...">
-                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.85rem;" onclick="saveGeminiApiKey()">حفظ المفتاح</button>
             </div>
 
             <div class="ai-chat-box" id="aiChatBox">
@@ -563,9 +537,6 @@
     </div>
 
     <script>
-        // ضعي مفتاح Gemini هنا للتجربة أو احفظيه من زر "⚙️ مفتاح AI" داخل التطبيق
-        var DEFAULT_GEMINI_API_KEY = "";
-
         var coins = 0;
         var completedSessionsCount = 0;
         var tasks = [
@@ -591,38 +562,6 @@
             updateDashboard();
             renderOnlineSquad();
             setupSpeechRecognition();
-            loadSavedApiKey();
-        }
-
-        function loadSavedApiKey() {
-            var savedKey = localStorage.getItem("study_squad_gemini_key") || DEFAULT_GEMINI_API_KEY;
-            var input = document.getElementById("geminiApiKeyInput");
-            if (input && savedKey) {
-                input.value = savedKey;
-            }
-        }
-
-        function getGeminiApiKey() {
-            var savedKey = localStorage.getItem("study_squad_gemini_key");
-            return (savedKey && savedKey.trim()) ? savedKey.trim() : DEFAULT_GEMINI_API_KEY.trim();
-        }
-
-        function toggleAiSettings() {
-            var panel = document.getElementById("aiSettingsPanel");
-            panel.style.display = panel.style.display === "block" ? "none" : "block";
-        }
-
-        function saveGeminiApiKey() {
-            var input = document.getElementById("geminiApiKeyInput");
-            var key = input.value.trim();
-            if (!key) {
-                localStorage.removeItem("study_squad_gemini_key");
-                alert("تم مسح المفتاح المحفوظ.");
-                return;
-            }
-            localStorage.setItem("study_squad_gemini_key", key);
-            document.getElementById("aiSettingsPanel").style.display = "none";
-            alert("تم حفظ مفتاح Gemini بنجاح! ✅");
         }
 
         function renderOnlineSquad() {
@@ -876,43 +815,14 @@
             }
         }
 
-        function getFallbackStudyReply(q) {
-            if (q.includes("فيزياء") || q.includes("قانون")) {
-                return "فكرة السؤال تعتمد على تحديد المعطيات واختيار القانون الأساسي (مثل كيرشوف أو فاراداي). أضيفي مفتاح Gemini من زر ⚙️ مفتاح AI لتحصلي على إجابة مفصلة لأي مسألة! ⚡";
-            } else if (q.includes("كيمياء") || q.includes("معادلة")) {
-                return "ابدئي بكتابة المعادلة موزونة ثم احسبي عدد المولات بدقة. لتحليل أي سؤال بالاسم والخطوات، أضيفي مفتاح Gemini من زر ⚙️ مفتاح AI. 🧪";
+        function extractPuterReply(res) {
+            if (typeof res === "string") return res.trim();
+            if (res && res.message && typeof res.message.content === "string") return res.message.content.trim();
+            if (res && Array.isArray(res.message && res.message.content)) {
+                return res.message.content.map(function(item) { return (item && item.text) || ""; }).join("").trim();
             }
-            return "لم يتم ضبط مفتاح Gemini API بعد. اضغطي على (⚙️ مفتاح AI) أعلى النافذة وأدخلي مفتاحك المجاني لكي أجاوبكِ على أي سؤال بدقة! 🧠";
-        }
-
-        async function fetchGeminiAnswer(userQuestion, apiKey) {
-            var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(apiKey);
-            var response = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: "أنت مساعد مذاكرة ذكي ومشجع لطلاب الثانوية العامة. أجب بالعربية بوضوح واختصار مناسب للقراءة الصوتية:\n" + userQuestion
-                        }]
-                    }]
-                })
-            });
-
-            var data = await response.json();
-            if (!response.ok) {
-                var apiErr = (data && data.error && data.error.message) ? data.error.message : "خطأ من خدمة الذكاء الاصطناعي";
-                throw new Error(apiErr);
-            }
-
-            var candidate = data && data.candidates && data.candidates[0];
-            var parts = candidate && candidate.content && candidate.content.parts;
-            var replyText = parts && parts.map(function(p) { return p.text || ""; }).join("").trim();
-
-            if (!replyText) {
-                throw new Error("لم يرجع المساعد نصاً واضحاً.");
-            }
-            return replyText;
+            if (res && typeof res.text === "string") return res.text.trim();
+            return res ? String(res).trim() : "";
         }
 
         async function askAiAssistant() {
@@ -931,9 +841,8 @@
             inputField.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            var apiKey = getGeminiApiKey();
-            if (!apiKey) {
-                appendBotMessage(getFallbackStudyReply(q));
+            if (!window.puter || !window.puter.ai || typeof window.puter.ai.chat !== "function") {
+                appendBotMessage("تعذّر تحميل مكتبة الذكاء الاصطناعي، تأكدي من الاتصال بالإنترنت وأعيدي تحميل الصفحة.");
                 return;
             }
 
@@ -945,12 +854,15 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                var reply = await fetchGeminiAnswer(q, apiKey);
+                var prompt = "أنت مساعد مذاكرة ذكي لطلاب الثانوية العامة. أجب بالعربية بوضوح واختصار مناسب للقراءة الصوتية:\n" + q;
+                var res = await window.puter.ai.chat(prompt);
+                var reply = extractPuterReply(res);
                 loadingMsg.remove();
-                appendBotMessage(reply);
+                appendBotMessage(reply || "لم يصل رد واضح، حاولي صياغة السؤال بشكل آخر.");
             } catch (err) {
                 loadingMsg.remove();
-                appendBotMessage("تعذّر الاتصال بـ Gemini حالياً (" + err.message + "). تأكدي من صحة المفتاح أو اتصالك بالإنترنت.");
+                var errMsg = (err && err.message) ? err.message : "تعذّر الاتصال بالمساعد حالياً.";
+                appendBotMessage("حدث خطأ: " + errMsg);
             } finally {
                 isAskingAi = false;
             }
